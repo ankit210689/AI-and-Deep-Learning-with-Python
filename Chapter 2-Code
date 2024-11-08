@@ -1,0 +1,61 @@
+import pandas as pd
+from tensorflow.keras.layers import Dense, Dropout, Activation
+from tensorflow.keras.models import Model, Sequential
+from tensorflow.keras.optimizers import Adam
+import numpy as np
+
+crime_data=pd.read_csv("https://raw.githubusercontent.com/stevedas/aiBook/main/crimeSTATS.csv",sep=',')
+
+X=crime_data.drop(['total_crime_reported_per_1_million_res'],axis=1).values
+Y=crime_data[['total_crime_reported_per_1_million_res']].values
+
+from sklearn.model_selection import train_test_split
+X_train,X_test, Y_train, Y_test=train_test_split(X,Y,test_size=0.20, random_state=25)
+
+def create_model (learning_rate, dropout_rate):
+
+  model=Sequential()
+  model.add(Dense(100,input_dim=X_train.shape[1],activation='relu'))
+  model.add(Dropout(dropout_rate))
+  model.add(Dense(50, activation='relu'))
+  model.add(Dropout(dropout_rate))
+  model.add(Dense(25, activation='relu'))
+  model.add(Dropout(dropout_rate))
+  model.add(Dense(1))
+
+  adam = Adam(learning_rate=learning_rate)
+  model.compile(loss='mean_squared_error', optimizer=adam, metrics=['mae'])
+  return model
+
+dropout_rate=0.1
+
+epochs=100
+learn_rate=0.01
+
+model=create_model(learning_rate=learn_rate, dropout_rate=dropout_rate)
+
+model_history=model.fit(X_train, Y_train, batch_size=1, epochs=epochs, validation_split=0.2, verbose=1)
+
+score=model.evaluate(X_test, Y_test, verbose=1)
+
+print("Loss:", score[0])
+print("Mean Absoulte Error:", score[1])
+
+import matplotlib.pyplot as plt
+
+plt.plot(model_history.history['mae'])
+plt.plot(model_history.history['val_mae'])
+plt.legend(['train','test'], loc='upper right')
+plt.title('Model Error')
+plt.ylabel('Mean Absolute Error')
+plt.xlabel('Epoch')
+
+X_new=[[30,74,11,31,20]]
+X_new=np.array(X_new)
+
+prediction=model.predict(X_new)
+
+print("The total crime reported per 1 million residents would be:", prediction)
+
+from tensorflow.keras.utils import plot_model
+plot_model(model, to_file='model_plot1.png', show_shapes=True, show_layer_names=True)
